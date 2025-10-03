@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
-import { storage } from './firebase';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 function App() {
-  const [imageFile, setImageFile] = useState(null);
-  const [videoFile, setVideoFile] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
 
@@ -12,85 +8,89 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
 
-    setImageFile(file);
-
-    const sRef = ref(storage, `images/${file.name}`);
-    const uploadTask = uploadBytesResumable(sRef, file);
-
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Image upload: ' + progress + '%');
-      },
-      (error) => console.error("Image upload error:", error),
-      async () => {
-        const url = await getDownloadURL(uploadTask.snapshot.ref);
-        setImageUrl(url);
-        alert('Image uploaded!');
-      }
-    );
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    alert('✅ Image uploaded!');
   };
 
   const handleVideoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setVideoFile(file);
-
-    const sRef = ref(storage, `videos/${file.name}`);
-    const uploadTask = uploadBytesResumable(sRef, file);
-
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Video upload: ' + progress + '%');
-      },
-      (error) => console.error("Video upload error:", error),
-      async () => {
-        const url = await getDownloadURL(uploadTask.snapshot.ref);
-        setVideoUrl(url);
-        alert('Video uploaded!');
-      }
-    );
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
+    alert('✅ Video uploaded!');
   };
 
-  const saveAndShare = () => {
+  const generateARLink = () => {
     if (!imageUrl || !videoUrl) {
-      alert('Please upload both image and video first!');
-      return;
+      alert('⚠️ Please upload both image and video first!');
+      return '';
     }
 
-    // Generate shareable link
-    const baseUrl = "https://your-ar-app.com"; // ← REPLACE WITH YOUR 8TH WALL APP URL
+    // 🔁 REPLACE WITH YOUR DEPLOYED 8TH WALL APP URL
+    const baseUrl = "https://web-ar-app-nine.vercel.app";
+
     const params = new URLSearchParams();
     params.set('image', imageUrl);
     params.set('video', videoUrl);
-    const shareLink = `${baseUrl}?${params.toString()}`;
 
-    navigator.clipboard.writeText(shareLink).then(() => {
-      alert('Link copied! Share it with your AR app.');
-    });
+    return `${baseUrl}?${params.toString()}`;
+  };
+
+  const copyLink = () => {
+    const link = generateARLink();
+    if (!link) return;
+
+    navigator.clipboard.writeText(link)
+      .then(() => alert('🎉 Link copied to clipboard!\nOpen on mobile to start AR.'))
+      .catch(err => {
+        console.error('Copy failed:', err);
+        alert('Copy failed. Please copy manually:\n' + link);
+      });
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h1>Customize Your AR Experience</h1>
+    <div style={{ padding: '30px', maxWidth: '800px', margin: '0 auto', fontFamily: 'Arial' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h1>✨ AR Customization Portal</h1>
+        <button 
+          onClick={() => window.location.href = '/login.html'}
+          style={{
+            padding: '8px 16px',
+            background: '#e2e8f0',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Logout
+        </button>
+      </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <label>Upload Target Image:</label>
+        <h3>🖼️ Upload Target Image</h3>
         <input type="file" accept="image/*" onChange={handleImageUpload} />
         {imageUrl && <img src={imageUrl} alt="Preview" style={{ width: '200px', marginTop: '10px' }} />}
       </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <label>Upload Video to Play:</label>
+        <h3>🎥 Upload Video to Play (MP4, H.264, 10MB)</h3>
         <input type="file" accept="video/*" onChange={handleVideoUpload} />
         {videoUrl && <video src={videoUrl} controls style={{ width: '300px', marginTop: '10px' }} />}
       </div>
 
-      <button onClick={saveAndShare}>
-        Save & Share
+      <button onClick={copyLink} disabled={!imageUrl || !videoUrl}>
+        📲 Copy AR Link
       </button>
+
+      {imageUrl && videoUrl && (
+        <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px' }}>
+          <strong>🔗 Your AR Link:</strong><br />
+          <code>{generateARLink()}</code>
+        </div>
+      )}
     </div>
   );
 }
